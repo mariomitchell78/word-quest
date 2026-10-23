@@ -1,3 +1,5 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Word Quest 2.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Fredoka:wght@500;600;700&family=Andika:wght@400;700&display=swap">
@@ -778,6 +780,7 @@ function home(tab){
   <div class="hud"><button class="hbtn who" id="who" aria-label="Switch player">${avatarSVG(p.avatar,38)}<span>${esc(p.name)}</span></button><span class="spacer"></span>
    <span class="hbtn" title="Coins">🪙 <b id="cn">${p.coins}</b></span><span class="hbtn" title="Day streak">🔥 ${streakNow()}</span>
    <button class="hbtn" id="voice" aria-pressed="${voiceOn}" aria-label="Voice">${voiceOn?"🔊":"🔇"}</button></div>
+  ${CH?`<div class="challenge"><h3>🔥 Challenge mode</h3><p>Extra letters, no hints, faster games, and a Boss Battle at the end of the Vocab Obby.</p></div>`:""}
   <div class="hero"><div class="stage"><div class="stand">${avatarSVG(p.avatar,140)}<span class="pet">${pt[0]}</span></div><div class="ground"></div></div>
    <div class="herotext"><button class="hbtn" id="weekbtn" style="align-self:flex-start">📅 ${esc(content.unit)} ▾</button><h1>Word Quest</h1>
     <p class="petline">${pt[0]} Your ${pt[1]} · ${p.xp} XP${nx?` · ${nx[2]-p.xp} to grow`:" · Fully grown!"}</p><div class="xp"><div style="width:${pct}%"></div></div>
@@ -794,7 +797,7 @@ function home(tab){
    <button class="tab" role="tab" data-t="spell" aria-selected="${homeTab==="spell"}"><span>🔤</span>Spelling</button>
    <button class="tab" role="tab" data-t="skills" aria-selected="${homeTab==="skills"}"><span>🧠</span>Skills</button>
    <button class="tab" role="tab" data-t="math" aria-selected="${homeTab==="math"}"><span>✖️</span>Math</button>
-   <button class="tab" role="tab" data-t="arcade" aria-selected="${homeTab==="arcade"}"><span>🎮</span>Arcade</button></div>
+   <button class="tab" role="tab" data-t="arcade" aria-selected="${homeTab==="arcade"}"><span>🎮</span>Games</button></div>
   <div id="worldview"></div>
   ${trickyV.length||trickyS.length?`<div class="box coral"><h3>Tricky words</h3><div class="chips">${trickyV.map(w=>`<span class="chip">${esc(find(w).e||"")} ${esc(w)}</span>`).join("")}${trickyS.map(w=>`<span class="chip">🔤 ${esc(w)}</span>`).join("")}</div><p class="note">Daily Practice starts with these.</p></div>`:""}
   <div class="box"><h3>Badges ${p.stickers.filter(k=>BADGES[k]).length}/${Object.keys(BADGES).length}</h3><div class="badges">${Object.entries(BADGES).map(([k,v])=>`<div class="bdg ${p.stickers.includes(k)?"":"off"}"><b>${v[0]}</b>${v[1]}</div>`).join("")}</div></div>
@@ -823,8 +826,8 @@ function openChest(){
 function renderWorld(){
   const v=document.getElementById("worldview");if(!v)return;
   if(homeTab==="arcade"){
-    v.innerHTML=`<div class="maptitle"><h2>🎮 Arcade</h2><p>More ways to play</p></div><div class="arcade">${EXTRAS.map(x=>{const open=isOpen(x.id),u=U();
-      const extra=x.id==="speed"&&u.speed?` Best: ${u.speed}`:x.id==="same"&&starsFor("same")?" "+"★".repeat(starsFor("same")):(x.id==="story"&&u.story)||(x.id==="teach"&&u.teach)?" ✓":"";
+    v.innerHTML=`<div class="maptitle"><h2>🎮 Games</h2><p>Play to practice your words</p></div><div class="arcade">${EXTRAS.map(x=>{const open=isOpen(x.id),u=U();
+      const extra=/^g_/.test(x.id)&&(P().games||{})[x.id]?` Best: ${P().games[x.id]}`:x.id==="speed"&&u.speed?` Best: ${u.speed}`:x.id==="same"&&starsFor("same")?" "+"★".repeat(starsFor("same")):(x.id==="story"&&u.story)||(x.id==="teach"&&u.teach)?" ✓":"";
       return `<button class="game ${open?"":"locked"}" data-q="${x.id}" style="background:${x.color}"><span class="ic">${open?x.ic:"🔒"}</span><h3>${x.name}</h3><p>${open?x.desc+extra:lockMsg(x.id)}</p>${open?`<span class="play">▶ PLAY</span>`:""}</button>`}).join("")}</div>`;
     v.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{const id=b.dataset.q;if(isOpen(id))start(id);else{beep(false);say(lockMsg(id))}});
     return;
@@ -991,19 +994,20 @@ function makeQ(item,kind,v){
 
 /* ---------- Game runner: a miss shows the answer, then the word comes back later as a different question ---------- */
 function runGame(id){
-  const W=WORDS();let queue;const final=id==="final"||id==="sp3",daily=id==="daily";
+  const W=WORDS();let queue;const final=id==="final"||id==="sp3"||id==="boss",daily=id==="daily";
   const anyKind=()=>shuffle(["def2word","word2def","sent","sent2","same"])[0],vv=()=>Math.random()<.5?"same":"not";
   if(daily){
     const tricky=Object.entries(U().miss).sort((a,b)=>b[1]-a[1]).map(x=>find(x[0])).filter(Boolean);
-    const pickW=[...new Set([...tricky.slice(0,3),...shuffle(W)])].slice(0,5);
+    const pickW=[...new Set([...tricky.slice(0,3),...shuffle(W)])].slice(0,CH?7:5);
     queue=pickW.map(w=>({w,kind:anyKind(),v:vv(),retry:0,src:"v"}));
     if(SPL().length){const ts=Object.entries(S().miss).sort((a,b)=>b[1]-a[1]).map(x=>findS(x[0])).filter(Boolean);
       [...new Set([...ts.slice(0,1),...shuffle(SPL())])].slice(0,2).forEach(w=>queue.push({w,kind:"sspell",retry:0,src:"s"}))}
-    {const ml=mathLevels().find(l=>l.n&&!passed(l.id)&&isOpen(l.id))||mathLevels()[0];for(let j=0;j<2;j++){const k=1+(Math.random()*12|0),f=Math.random()<.5?{a:ml.n,b:k}:{a:k,b:ml.n};queue.push({w:{a:f.a,b:f.b,fam:ml.n,w:`${f.a}×${f.b}`},kind:"fact",retry:0,src:"x"})}}
+    {const ml=mathLevels().find(l=>l.n&&!passed(l.id)&&isOpen(l.id))||mathLevels()[0];for(let j=0;j<(CH?3:2);j++){const k=1+(Math.random()*12|0),f=Math.random()<.5?{a:ml.n,b:k}:{a:k,b:ml.n};queue.push({w:{a:f.a,b:f.b,fam:ml.n,w:`${f.a}×${f.b}`},kind:"fact",retry:0,src:"x"})}}
     const SK=skLevels().filter(l=>l.items&&l.items.length);
     if(SK.length){const L=SK[Math.random()*SK.length|0],it=shuffle(L.items)[0];queue.push({w:Object.assign({},it,{area:L.name,w:it.c[it.a]}),kind:"mcq",retry:0,src:"k"})}
   }else if(/^k\d/.test(id)){const L=skLevels().find(l=>l.id===id);queue=shuffle(L.items).slice(0,8).map(it=>({w:Object.assign({},it,{area:L.name,w:it.c[it.a]}),kind:"mcq",retry:0,src:"k"}))}
-  else if(/^y/.test(id)){const L=STRATS.find(l=>l.id===id);queue=Array.from({length:8},()=>L.gen()).map(it=>({w:Object.assign(it,{area:L.name,w:it.c[it.a]}),kind:"mcq",retry:0,src:"y"}))}
+  else if(/^y/.test(id)){const L=STRATS.find(l=>l.id===id);queue=Array.from({length:CH?10:8},()=>L.gen()).map(it=>({w:Object.assign(it,{area:L.name,w:it.c[it.a]}),kind:"mcq",retry:0,src:"y"}))}
+  else if(id==="boss")queue=shuffle(W).flatMap(w=>[{w,kind:/\s/.test(w.w)?"def2word":"vtype",retry:0,src:"v"},{w,kind:Math.random()<.5?"word2def":"sent2",v:"same",retry:0,src:"v"}]).slice(0,14);
   else if(id==="sp1")queue=shuffle(SPL()).slice(0,10).map(w=>({w,kind:"sspell",retry:0,src:"s"}));
   else if(id==="sp2")queue=shuffle(SPL().filter(x=>patternOf(x.w))).slice(0,10).map(w=>({w,kind:"blend",retry:0,src:"s"}));
   else if(id==="sp3")queue=shuffle(SPL()).map(w=>({w,kind:"type",retry:0,src:"s"}));
@@ -1027,6 +1031,7 @@ function runGame(id){
       spell(Object.assign(base,{target:it.w,ask:"Listen and spell",prompt:bl?esc(bl).replace("___",'<span class="blank">&nbsp;</span>'):"Listen, then spell the word.",
       intro:`Spell ${it.w}. ${it.s||""} ${it.w}.`,again:`${it.w}. ${it.s||""} ${it.w}.`,learn:"",big:true,hint:p&&p.type==="blend"?`It starts with ${spellOut(p.v)}.`:p&&p.type==="digraph"?`Listen for ${spellOut(p.v)}.`:`It starts with ${it.w[0]}.`,sayBtn:true}))}
     else if(q.kind==="type")typeQ(q.w,base);
+    else if(q.kind==="vtype")typeQ({w:q.w.w.toLowerCase(),s:(q.w.s2||q.w.s||"").replace("___",q.w.w)},base);
     else if(q.kind==="fact")factAsk(q.w.a,q.w.b,{head:bar(pos,queue.length),fam:q.w.fam,tab,label:"Math fact",done:(ok,first)=>done(ok&&first)});
     else if(q.kind==="mcq")ask(mcqQ(q.w),{w:q.w.c[q.w.a],m:""},pos,queue.length,done,{retry:q.retry>0,tab,retNote:"This question will come back later."});
     else ask(makeQ(q.w,q.kind,q.v),q.w,pos,queue.length,done,{final,retry:q.retry>0,tab});
@@ -1066,7 +1071,8 @@ function ask(Q,item,i,n,done,o={}){
 }
 
 function spell(o){
-  const full=o.target,target=full.replace(/ /g,""),letters=shuffle([...target].map((c,k)=>({c,k})));
+  if(CH)o.hint="";
+  const full=o.target,target=full.replace(/ /g,""),letters=shuffle([...target].map((c,k)=>({c,k})).concat(CH&&!o.final?shuffle("abcdefghiklmnoprstuwy".split("").filter(c=>!target.includes(c))).slice(0,3).map((c,j)=>({c,k:100+j})):[]));
   let placed=[],tries=0,locked=0;
   const draw=mark=>{
     app.innerHTML=bar(o.i,o.n)+`<div class="card">${o.retry?'<div class="again">↻ Word coming back</div>':""}<div class="ask">${o.ask}</div>
@@ -1152,7 +1158,7 @@ function finish(id,score,n,missed,earned){
   const list=isSp?spLevels():isK?skLevels():LEVELS,idx=list.findIndex(l=>l.id===id),nextL=idx>=0?list[idx+1]:null;
   const opened=nextL&&stars>=PASS&&was<PASS?nextL:null,beat=idx===list.length-1&&stars>=PASS&&was<PASS;
   if(beat&&isK)give("skills");
-  const isTest=id==="final"||id==="sp3";
+  const isTest=id==="final"||id==="sp3"||id==="boss";
   const msg=isTest?(stars===3?"Perfect test!":stars>=PASS?"You passed the test!":"Almost there! Practice and try again."):
     ["Keep practicing, you can do it!","Good start! Try again for 2 stars.","Great job!","Superstar! Every one right the first time!"][stars];
   beep(stars>=PASS);
@@ -1959,6 +1965,184 @@ Write exactly 4 story questions. Every word in the list must appear in "words" i
   try{await saveContent()}catch(e){buildMsg+=" (Saved on this device only.)"}
   parentArea();return true;
 }
+
+/* ===================== Mini-games (shared by both games) ===================== */
+/* Each game takes a config with id, title, tab, and its own data, and ends with gameEnd(). */
+const KIDQ=(new URLSearchParams(location.search).get("kid")||"").toLowerCase();
+const CH=KIDQ==="zaedyn",GM=KIDQ==="naeyleah";
+(()=>{const st=document.createElement("style");st.textContent=`
+.gfield{position:relative;height:380px;border:4px solid var(--ink);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#a8e0ff,#e6f7ff 75%,#c9efb9);touch-action:manipulation}
+.gfield .gground{position:absolute;left:0;right:0;bottom:0;height:26px;background:linear-gradient(180deg,var(--grass) 0 9px,var(--dirt) 9px);border-top:4px solid var(--ink)}
+.ghud{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.ghud .hbtn{min-height:40px}
+.gprompt{font-family:var(--display);font-size:30px;text-align:center;line-height:1.15;color:var(--ink)}
+.gprompt.small{font-family:var(--body);font-weight:700;font-size:21px}
+.bub{position:absolute;bottom:-90px;width:96px;height:96px;border-radius:50%;border:4px solid var(--ink);background:radial-gradient(circle at 30% 30%,#fff,#bfe9ff 45%,#7cc8ff);font-family:var(--display);font-size:24px;color:var(--ink);display:grid;place-items:center;box-shadow:0 5px 0 rgba(27,27,47,.35);animation:bubUp linear forwards;padding:4px;overflow-wrap:anywhere;line-height:1}
+@keyframes bubUp{from{transform:translateY(0)}to{transform:translateY(-520px)}}
+.bub.pop{animation:bubPop .3s forwards!important;background:var(--green);color:#fff}
+@keyframes bubPop{to{transform:scale(1.5);opacity:0}}
+.bub.no{background:#ffd0d0;animation-play-state:paused}
+.drop{position:absolute;top:-70px;width:58px;height:58px;border-radius:12px;border:4px solid var(--ink);background:var(--yellow);font-family:var(--display);font-size:30px;display:grid;place-items:center;box-shadow:0 5px 0 var(--ink);animation:dropDown linear infinite}
+@keyframes dropDown{from{transform:translateY(0)}to{transform:translateY(470px)}}
+.drop.got{background:var(--green);color:#fff;animation:bubPop .3s forwards!important}
+.drop.no{background:var(--red);color:#fff}
+.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mcard{aspect-ratio:3/4;border:4px solid var(--ink);border-radius:12px;box-shadow:0 5px 0 var(--ink);background:var(--purple);color:#fff;font-family:var(--display);font-size:30px;display:grid;place-items:center;padding:4px;overflow-wrap:anywhere;line-height:1.05;transition:transform .2s}
+.mcard.up{background:var(--paper);color:var(--ink);font-size:17px;transform:rotateY(0)}
+.mcard.up.emo{font-size:40px}
+.mcard.done{background:var(--green);color:#fff;font-size:17px}
+.mcard.done.emo{font-size:40px}
+.rscene{position:relative;height:300px;border:4px solid var(--ink);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#a8e0ff,#e6f7ff)}
+.rblock{position:absolute;width:44%;min-height:62px;right:4%;border:4px solid var(--ink);border-radius:10px;box-shadow:0 8px 0 var(--ink);font-family:var(--display);font-size:22px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.3);padding:6px;overflow-wrap:anywhere;line-height:1.05}
+.rblock.no{background:var(--red)!important;animation:shake .35s}
+.rbase{position:absolute;left:4%;bottom:30px;width:34%;height:36px;background:linear-gradient(180deg,var(--grass) 0 10px,var(--dirt) 10px);border:4px solid var(--ink);border-radius:8px}
+.rav{position:absolute;left:10%;bottom:66px;transition:left .5s ease,bottom .5s cubic-bezier(.3,1.6,.5,1),transform .5s}
+.rav.fall{transition:bottom .6s ease-in;bottom:-140px!important}
+.hearts{font-size:18px;letter-spacing:1px}
+.gtime{height:12px;border:3px solid var(--ink);border-radius:6px;background:var(--paper);overflow:hidden}
+.gtime div{height:100%;background:var(--orange);transition:width .2s linear}
+.confetti{position:fixed;top:-20px;width:10px;height:16px;z-index:20;pointer-events:none;animation:conf 1.8s ease-in forwards;border-radius:2px}
+@keyframes conf{to{transform:translateY(105vh) rotate(720deg)}}
+`;document.head.appendChild(st)})();
+function confetti(n=60){const C=["#ff4b4b","#3b82f6","#ffcf1f","#22c55e","#8b5cf6","#ff9f1c","#ff6fb5"];
+  for(let i=0;i<n;i++){const d=document.createElement("div");d.className="confetti";d.style.left=Math.random()*100+"vw";d.style.background=C[i%C.length];d.style.animationDelay=Math.random()*.6+"s";document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}}
+function gHead(cfg,stats){return `<div class="bar"><button class="back" id="back">← Games</button><span style="flex:1;font-family:var(--display);font-size:20px">${esc(cfg.title)}</span>${stats}</div>`}
+function gQuit(cfg,clean){return()=>{clean&&clean();hush();document.onkeydown=null;home(cfg.tab)}}
+function gameEnd(cfg,score,max,line){
+  hush();document.onkeydown=null;screen="play";const p=P();p.games=p.games||{};const prev=p.games[cfg.id]||0,rec=score>prev;if(rec)p.games[cfg.id]=score;
+  const coins=Math.min(25,Math.max(2,score))+(rec&&prev?5:0);addCoins(coins);if(score>=Math.ceil(max*.6))addXP(1);savePlayer();
+  if(score>=Math.ceil(max*.6))confetti();
+  app.innerHTML=`<div class="card result"><div class="bigicon pop">${cfg.icon||"🎮"}</div><h2>${rec&&prev?"New high score!":score>=Math.ceil(max*.6)?"Awesome!":"Nice try!"}</h2>
+   <p class="timer">${score}</p><p>${esc(line||"points")}${prev?` · best ${Math.max(prev,score)}`:""}</p><p class="coinline">+${coins} 🪙</p>
+   <div class="row" style="width:100%"><button class="ghost" id="again">Play again</button><button class="btn" id="h">Back</button></div></div>`;
+  beep(true);say(`${rec&&prev?"New high score! ":""}You got ${score}! Great playing!`,250);
+  app.querySelector("#again").onclick=()=>cfg.restart();app.querySelector("#h").onclick=()=>home(cfg.tab);
+}
+
+/* ---------- Bubble Pop: pop the bubble that answers the prompt ---------- */
+function bubbleGame(cfg){
+  screen="play";hush();
+  let score=0,left=cfg.seconds||60,ri=0,over=false,spawn=null,tick=null,rounds=shuffle(cfg.rounds);
+  const speed=cfg.speed||7;
+  app.innerHTML=gHead(cfg,`<span class="hbtn">⏱ <b id="tl">${left}</b></span><span class="hbtn">⭐ <b id="sc">0</b></span>`)+
+   `<div class="card" style="padding:12px 14px;gap:8px"><div class="gprompt ${cfg.small?"small":""}" id="gp"></div><button class="say" id="say" style="align-self:center">🔊 Hear it</button></div>
+   <div class="gfield" id="gf"><div class="gground"></div></div>`;
+  const gf=app.querySelector("#gf"),clean=()=>{over=true;clearInterval(spawn);clearInterval(tick)};
+  app.querySelector("#back").onclick=gQuit(cfg,clean);
+  const R=()=>rounds[ri%rounds.length];
+  const show=()=>{if(over)return;const r=R();app.querySelector("#gp").innerHTML=r.html||esc(r.prompt);say(r.read||r.prompt,100);gf.querySelectorAll(".bub").forEach(b=>b.remove());lane=0;spawnOne();spawnOne()};
+  app.querySelector("#say").onclick=()=>hear(R().read||R().prompt);
+  let lane=0;
+  const spawnOne=()=>{if(over)return;const r=R(),opts=shuffle(r.options);const want=Math.random()<.4||!gf.querySelector(`.bub[data-ok="1"]`);
+    const label=want?r.target:opts.find(o=>o!==r.target)||r.target;
+    const b=document.createElement("button");b.className="bub";b.textContent=label;b.dataset.ok=label===r.target?"1":"0";
+    const lanes=[4,36,68];b.style.left=`calc(${lanes[lane++%3]}% + ${Math.random()*4|0}%)`;b.style.animationDuration=(speed+Math.random()*2)+"s";
+    if(label.length>7)b.style.fontSize="18px";
+    b.onclick=()=>{if(over)return;if(b.dataset.ok==="1"){b.classList.add("pop");score++;app.querySelector("#sc").textContent=score;tones([[880,0,.07],[1320,.06,.1]],"triangle",.08);setTimeout(()=>{ri++;show()},350)}
+      else{b.classList.add("no");beep(false);if(cfg.onWrong)cfg.onWrong(R());setTimeout(()=>b.remove(),500)}};
+    b.addEventListener("animationend",e=>{if(e.animationName==="bubUp")b.remove()});gf.appendChild(b)};
+  spawn=setInterval(()=>{if(!gf.isConnected)return clean();spawnOne()},Math.max(700,speed*170));
+  tick=setInterval(()=>{if(over)return;if(!gf.isConnected)return clean();left--;const t=app.querySelector("#tl");if(t)t.textContent=left;if(left<=0){clean();gameEnd(cfg,score,cfg.goal||12,cfg.unit||"popped")}},1000);
+  show();
+}
+
+/* ---------- Letter Rain: tap the letters of the word as they fall ---------- */
+function letterRain(cfg){
+  screen="play";hush();
+  let score=0,left=cfg.seconds||90,wi=0,k=0,over=false,tick=null;const words=shuffle(cfg.words);
+  const fall=cfg.fall||7;
+  app.innerHTML=gHead(cfg,`<span class="hbtn">⏱ <b id="tl">${left}</b></span><span class="hbtn">⭐ <b id="sc">0</b></span>`)+
+   `<div class="card" style="padding:12px 14px;gap:8px"><div class="slots" id="sl"></div><button class="say" id="say" style="align-self:center">🔊 Hear the word</button></div>
+   <div class="gfield" id="gf"><div class="gground"></div></div>`;
+  const gf=app.querySelector("#gf"),clean=()=>{over=true;clearInterval(tick)};
+  app.querySelector("#back").onclick=gQuit(cfg,clean);
+  const W=()=>words[wi%words.length];
+  app.querySelector("#say").onclick=()=>hear(W().w+". "+(W().s||""));
+  const slots=()=>{if(over)return;const w=W().w;app.querySelector("#sl").innerHTML=[...w].map((c,i)=>`<span class="slot ${i<k?"on keep":""}">${i<k?esc(c):""}</span>`).join("")};
+  const drop=()=>{gf.querySelectorAll(".drop").forEach(d=>d.remove());const w=W().w;
+    const uq=[...new Set(w)],pool=shuffle(uq.concat(shuffle("abcdefghijklmnoprstuvwy".split("").filter(c=>!w.includes(c))).slice(0,Math.max(1,Math.min(cfg.decoys||3,9-uq.length)))));
+    pool.forEach((c,i)=>{const d=document.createElement("button");d.className="drop";d.textContent=c;d.dataset.c=c;
+      d.style.left=`calc(${(i%5)*19+2}% )`;d.style.animationDuration=(fall+Math.random()*2.5)+"s";d.style.animationDelay=(-Math.random()*fall)+"s";
+      d.onclick=()=>{if(over)return;if(c===w[k]){k++;tones([[700+k*60,0,.06]],"square",.04);slots();
+          if(k>=w.length){score++;app.querySelector("#sc").textContent=score;beep(true);gf.querySelectorAll(".drop").forEach(x=>x.classList.add("got"));say(w+"!",50);setTimeout(()=>{wi++;k=0;next()},700)}}
+        else{d.classList.add("no");beep(false);setTimeout(()=>d.classList.remove("no"),400)}};
+      gf.appendChild(d)})};
+  const next=()=>{if(over)return;slots();drop();say(`Spell ${W().w}. ${W().s||""}`,150)};
+  tick=setInterval(()=>{if(over)return;if(!gf.isConnected)return clean();left--;const t=app.querySelector("#tl");if(t)t.textContent=left;if(left<=0){clean();gameEnd(cfg,score,cfg.goal||6,"words spelled")}},1000);
+  next();
+}
+
+/* ---------- Memory Match: flip two cards, find the pairs ---------- */
+function memoryGame(cfg){
+  screen="play";hush();
+  const deck=shuffle(cfg.pairs.flatMap((p,i)=>[{t:p.a,k:i,emo:p.aEmo},{t:p.b,k:i,emo:p.bEmo}]));
+  let up=[],moves=0,found=0,lock=false,gone=false;
+  const draw=()=>{if(gone)return;app.innerHTML=gHead(cfg,`<span class="hbtn">👆 <b>${moves}</b></span><span class="hbtn">✅ <b>${found}/${cfg.pairs.length}</b></span>`)+
+    `<div class="card" style="padding:12px 14px"><p class="note" style="text-align:center">${esc(cfg.help||"Find the matching pairs!")}</p><div class="mgrid">${deck.map((c,i)=>`<button class="mcard ${c.done?"done":up.includes(i)?"up":""} ${c.emo?"emo":""}" data-i="${i}" aria-label="${c.done||up.includes(i)?esc(c.t):"card"}">${c.done||up.includes(i)?esc(c.t):"?"}</button>`).join("")}</div></div>`;
+    app.querySelector("#back").onclick=gQuit(cfg,()=>{gone=true});
+    app.querySelectorAll(".mcard").forEach(b=>b.onclick=()=>{const i=+b.dataset.i,c=deck[i];if(lock||c.done||up.includes(i))return;up.push(i);if(!c.emo)say(c.t,0);tones([[520,0,.05]],"square",.04);
+      if(up.length===2){moves++;const [x,y]=up.map(j=>deck[j]);
+        if(x.k===y.k){x.done=y.done=true;found++;up=[];draw();beep(true);if(found===cfg.pairs.length){setTimeout(()=>{if(gone)return;const best=cfg.pairs.length,sc=Math.max(1,best*3-Math.max(0,moves-best));gameEnd(cfg,sc,best*2,"points")},700)}return}
+        lock=true;draw();setTimeout(()=>{up=[];lock=false;if(app.querySelector(".mgrid"))draw()},1100);return}
+      draw()})};
+  draw();say(cfg.help||"Find the matching pairs!",150);
+}
+
+/* ---------- Jump Run: answer to jump to the right block ---------- */
+function runnerGame(cfg){
+  screen="play";hush();
+  const items=shuffle(cfg.items).slice(0,cfg.n||10);let i=0,score=0,hearts=cfg.hearts||3,over=false,tmr=null,t0=0;
+  const COL=["var(--blue)","var(--orange)","var(--purple)"];
+  const clean=()=>{over=true;clearInterval(tmr)};
+  const draw=()=>{const it=items[i];
+    app.innerHTML=gHead(cfg,`<span class="hearts" aria-label="${hearts} hearts">${"❤️".repeat(hearts)}${"🤍".repeat(Math.max(0,(cfg.hearts||3)-hearts))}</span><span class="hbtn">⭐ <b>${score}</b></span>`)+
+     `<div class="card" style="padding:12px 14px;gap:8px"><div class="gprompt ${it.small?"small":""}">${it.html||esc(it.q)}</div>${cfg.time?`<div class="gtime"><div id="gt" style="width:100%"></div></div>`:""}<button class="say" id="say" style="align-self:center">🔊 Hear it</button></div>
+     <div class="rscene" id="rs"><div class="rbase"></div><div class="rav" id="rav">${avatarSVG(P().avatar,80)}</div>
+     ${it.choices.map((c,k)=>`<button class="rblock" data-k="${k}" style="top:${18+k*92}px;background:${COL[k%3]}">${esc(c)}</button>`).join("")}</div>
+     <p class="note" style="text-align:center">Question ${i+1} of ${items.length}. Tap the right block to jump!</p>`;
+    app.querySelector("#back").onclick=gQuit(cfg,clean);app.querySelector("#say").onclick=()=>hear(it.read||it.q);
+    say(it.read||it.q,120);
+    app.querySelectorAll(".rblock").forEach(b=>b.onclick=()=>pick(+b.dataset.k,b));
+    if(cfg.time){t0=Date.now();clearInterval(tmr);tmr=setInterval(()=>{if(over)return;if(!app.querySelector("#rs"))return clean();const f=1-(Date.now()-t0)/(cfg.time*1000),g=app.querySelector("#gt");if(g)g.style.width=Math.max(0,f*100)+"%";if(f<=0){clearInterval(tmr);pick(-1,null)}},150)}
+  };
+  let busy=false;
+  const pick=(k,b)=>{if(over||busy||!app.querySelector("#rs"))return;busy=true;clearInterval(tmr);const it=items[i],av=app.querySelector("#rav");
+    if(k===it.ans){score++;sfx.jump();av.style.left="62%";av.style.bottom=(300-18-k*92-4)+"px";av.style.transform="translateY(0)";
+      setTimeout(()=>{busy=false;if(over)return;i++;if(i>=items.length){clean();gameEnd(cfg,score,items.length,"jumps")}else draw()},800);return}
+    hearts--;if(b)b.classList.add("no");beep(false);av.classList.add("fall");
+    const ok=app.querySelectorAll(".rblock")[it.ans];if(ok){ok.style.outline="5px solid var(--green)"}
+    say(`Oops! It was ${it.choices[it.ans]}.`,100);
+    setTimeout(()=>{busy=false;if(over)return;i++;if(hearts<=0||i>=items.length){clean();gameEnd(cfg,score,items.length,"jumps")}else draw()},1500)};
+  draw();
+}
+
+/* ===================== Word Quest: games, challenge and game modes ===================== */
+EXTRAS.unshift(
+ {id:"g_run",ic:"🦘",name:"Jump Run",desc:"Jump to the word that fits.",color:"var(--blue)"},
+ {id:"g_mem",ic:"🃏",name:"Memory Match",desc:"Match words and meanings.",color:"var(--purple)"},
+ {id:"g_rain",ic:"🌧️",name:"Letter Rain",desc:"Catch the letters to spell.",color:"var(--green)"},
+ {id:"g_pop",ic:"🫧",name:"Fact Pop",desc:"Pop the right times-table answer.",color:"var(--orange)"});
+if(CH){LEVELS.push({id:"boss",name:"Boss Battle",desc:"Type the words. No hints. Beat the boss!",color:"#b91c1c"});BADGES.boss=["🐲","Boss Beater"]}
+if(GM&&!sessionStorage.getItem("gm-tab")){homeTab="arcade";try{sessionStorage.setItem("gm-tab","1")}catch(e){}}
+function wqGame(id){
+  const cfg={id,tab:"arcade",restart:()=>wqGame(id)},Wd=WORDS();
+  if(id==="g_run"){Object.assign(cfg,{title:"Jump Run",icon:"🦘",hearts:3,time:CH?8:GM?16:14,n:10,
+    items:shuffle(Wd).flatMap(w=>{const o=shuffle([w,...others(w,2)]),ch=o.map(x=>x.w),ans=o.indexOf(w);const s=(w.s2||w.s||"");
+      return[{q:`Which word means “${w.m}”?`,read:`Which word means: ${w.m}?`,small:true,choices:ch,ans},
+        s?{html:esc(s).replace("___",'<span class="blank">&nbsp;</span>'),q:s,read:`Which word fits? ${s.replace("___","blank")}`,small:true,choices:ch,ans}:null].filter(Boolean)})});
+    return runnerGame(cfg)}
+  if(id==="g_mem"){const ws=shuffle(Wd).slice(0,CH?8:6);Object.assign(cfg,{title:"Memory Match",icon:"🃏",help:"Match each word to what it means.",pairs:ws.map(w=>({a:w.w,b:w.same||w.m}))});return memoryGame(cfg)}
+  if(id==="g_rain"){const L=SPL().length?SPL():Wd.filter(w=>!/\s/.test(w.w)).map(w=>({w:w.w.toLowerCase(),s:""}));
+    Object.assign(cfg,{title:"Letter Rain",icon:"🌧️",seconds:CH?75:90,fall:CH?5:7.5,decoys:CH?5:3,goal:CH?8:6,words:L.map(x=>({w:x.w,s:x.s||""}))});return letterRain(cfg)}
+  if(id==="g_pop"){const fams=CH?[2,3,4,5,6,7,8,9,10,11,12]:(FACTS.filter(n=>passed("x"+n)).length?FACTS.filter(n=>passed("x"+n)):[2,5,10]);
+    const rounds=Array.from({length:40},()=>{const a=fams[Math.random()*fams.length|0],b=rnd(1,12),r=a*b;
+      const wr=[...new Set([r+a,r-a,r+b,a*(b+2),r+1,r-1].filter(x=>x>0&&x!==r))];return{prompt:`${a} × ${b}`,read:`${a} times ${b}`,target:String(r),options:[String(r),...shuffle(wr).slice(0,3).map(String)]}});
+    Object.assign(cfg,{title:"Fact Pop",icon:"🫧",seconds:60,speed:CH?5.5:7.5,goal:CH?18:12,unit:"facts popped",rounds});return bubbleGame(cfg)}
+}
+{const _st=start;start=function(id){if(/^g_/.test(id)){hush();screen="play";document.onkeydown=null;return wqGame(id)}return _st(id)}}
+{const _io=isOpen;isOpen=function(id){if(/^g_/.test(id))return true;if(id==="boss")return U().unlock||passed("final");return _io(id)}}
+{const _lm=lockMsg;lockMsg=function(id){if(id==="boss")return "Get 2 stars in the Final Test to open the Boss.";return _lm(id)}}
+{const _f=finish;finish=function(id,score,n,...r){_f(id,score,n,...r);if(id==="daily"||starsCalc(score,n)>=PASS)confetti()}}
 
 /* ===================== Kid accounts (GitHub Pages) ===================== */
 const KID=(new URLSearchParams(location.search).get("kid")||"").toLowerCase(),KIDNAMES={naeyleah:"Naeyleah",zaedyn:"Zaedyn",adelynn:"Adelynn"};
