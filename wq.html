@@ -1001,15 +1001,15 @@ function runGame(id){
     const pickW=[...new Set([...tricky.slice(0,3),...shuffle(W)])].slice(0,CH?7:5);
     queue=pickW.map(w=>({w,kind:anyKind(),v:vv(),retry:0,src:"v"}));
     if(SPL().length){const ts=Object.entries(S().miss).sort((a,b)=>b[1]-a[1]).map(x=>findS(x[0])).filter(Boolean);
-      [...new Set([...ts.slice(0,1),...shuffle(SPL())])].slice(0,2).forEach(w=>queue.push({w,kind:"sspell",retry:0,src:"s"}))}
+      [...new Set([...ts.slice(0,1),...shuffle(SPL())])].slice(0,GM?4:2).forEach(w=>queue.push({w,kind:"sspell",retry:0,src:"s"}))}
     {const ml=mathLevels().find(l=>l.n&&!passed(l.id)&&isOpen(l.id))||mathLevels()[0];for(let j=0;j<(CH?3:2);j++){const k=1+(Math.random()*12|0),f=Math.random()<.5?{a:ml.n,b:k}:{a:k,b:ml.n};queue.push({w:{a:f.a,b:f.b,fam:ml.n,w:`${f.a}×${f.b}`},kind:"fact",retry:0,src:"x"})}}
     const SK=skLevels().filter(l=>l.items&&l.items.length);
     if(SK.length){const L=SK[Math.random()*SK.length|0],it=shuffle(L.items)[0];queue.push({w:Object.assign({},it,{area:L.name,w:it.c[it.a]}),kind:"mcq",retry:0,src:"k"})}
   }else if(/^k\d/.test(id)){const L=skLevels().find(l=>l.id===id);queue=shuffle(L.items).slice(0,8).map(it=>({w:Object.assign({},it,{area:L.name,w:it.c[it.a]}),kind:"mcq",retry:0,src:"k"}))}
   else if(/^y/.test(id)){const L=STRATS.find(l=>l.id===id);queue=Array.from({length:CH?10:8},()=>L.gen()).map(it=>({w:Object.assign(it,{area:L.name,w:it.c[it.a]}),kind:"mcq",retry:0,src:"y"}))}
   else if(id==="boss")queue=shuffle(W).flatMap(w=>[{w,kind:/\s/.test(w.w)?"def2word":"vtype",retry:0,src:"v"},{w,kind:Math.random()<.5?"word2def":"sent2",v:"same",retry:0,src:"v"}]).slice(0,14);
-  else if(id==="sp1")queue=shuffle(SPL()).slice(0,10).map(w=>({w,kind:"sspell",retry:0,src:"s"}));
-  else if(id==="sp2")queue=shuffle(SPL().filter(x=>patternOf(x.w))).slice(0,10).map(w=>({w,kind:"blend",retry:0,src:"s"}));
+  else if(id==="sp1")queue=shuffle(SPL()).slice(0,GM?20:10).map(w=>({w,kind:"sspell",retry:0,src:"s"}));
+  else if(id==="sp2")queue=shuffle(SPL().filter(x=>patternOf(x.w))).slice(0,GM?16:10).map(w=>({w,kind:"blend",retry:0,src:"s"}));
   else if(id==="sp3")queue=shuffle(SPL()).map(w=>({w,kind:"type",retry:0,src:"s"}));
   else{const kinds=id==="meaning"?()=>Math.random()<.5?"def2word":"word2def":id==="sentence"?()=>"sent":id==="spell"?()=>"spell":id==="same"?()=>"same":null;
     const mix=shuffle(["def2word","word2def","sent","sent2","spell","same","def2word","sent"]);
@@ -2006,13 +2006,17 @@ const CH=KIDQ==="zaedyn",GM=KIDQ==="naeyleah";
 `;document.head.appendChild(st)})();
 function confetti(n=60){const C=["#ff4b4b","#3b82f6","#ffcf1f","#22c55e","#8b5cf6","#ff9f1c","#ff6fb5"];
   for(let i=0;i<n;i++){const d=document.createElement("div");d.className="confetti";d.style.left=Math.random()*100+"vw";d.style.background=C[i%C.length];d.style.animationDelay=Math.random()*.6+"s";document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}}
-function gHead(cfg,stats){return `<div class="bar"><button class="back" id="back">← Games</button><span style="flex:1;font-family:var(--display);font-size:20px">${esc(cfg.title)}</span>${stats}</div>`}
+function gHead(cfg,stats){return `<div class="bar"><button class="back" id="back">← ${cfg.tab==="spell"?"Map":"Games"}</button><span style="flex:1;font-family:var(--display);font-size:20px">${esc(cfg.title)}</span>${stats}</div>`}
 function gQuit(cfg,clean){return()=>{clean&&clean();hush();document.onkeydown=null;home(cfg.tab)}}
 function gameEnd(cfg,score,max,line){
   hush();document.onkeydown=null;screen="play";const p=P();p.games=p.games||{};const prev=p.games[cfg.id]||0,rec=score>prev;if(rec)p.games[cfg.id]=score;
   const coins=Math.min(25,Math.max(2,score))+(rec&&prev?5:0);addCoins(coins);if(score>=Math.ceil(max*.6))addXP(1);savePlayer();
-  if(score>=Math.ceil(max*.6))confetti();
-  app.innerHTML=`<div class="card result"><div class="bigicon pop">${cfg.icon||"🎮"}</div><h2>${rec&&prev?"New high score!":score>=Math.ceil(max*.6)?"Awesome!":"Nice try!"}</h2>
+  let stars=-1,opened=null;
+  if(cfg.starGoal){const g=cfg.starGoal;stars=score>=g?3:score>=Math.ceil(g*.7)?2:score>=Math.ceil(g*.4)?1:0;const r=recFor(cfg.id),was=r.best[cfg.id]||0;
+    if(stars>was){r.best[cfg.id]=stars;addXP(stars-was);savePlayer()}
+    if(stars>=PASS&&was<PASS&&cfg.list){const L=cfg.list(),i=L.findIndex(l=>l.id===cfg.id);if(i>=0&&L[i+1])opened=L[i+1]}}
+  if(score>=Math.ceil(max*.6)||stars>=PASS)confetti();
+  app.innerHTML=`<div class="card result">${stars>=0?`<div class="bigicon pop"><span class="star">${"★".repeat(stars)}</span>${"☆".repeat(3-stars)}</div>`:""}<div class="bigicon pop">${cfg.icon||"🎮"}</div>${opened?`<p class="unlock">${esc(opened.name)} is open!</p>`:stars>=0&&stars<PASS?`<p>Get ${cfg.starGoal>1?Math.ceil(cfg.starGoal*.7):1} to earn 2 stars.</p>`:""}<h2>${rec&&prev?"New high score!":score>=Math.ceil(max*.6)?"Awesome!":"Nice try!"}</h2>
    <p class="timer">${score}</p><p>${esc(line||"points")}${prev?` · best ${Math.max(prev,score)}`:""}</p><p class="coinline">+${coins} 🪙</p>
    <div class="row" style="width:100%"><button class="ghost" id="again">Play again</button><button class="btn" id="h">Back</button></div></div>`;
   beep(true);say(`${rec&&prev?"New high score! ":""}You got ${score}! Great playing!`,250);
@@ -2030,7 +2034,7 @@ function bubbleGame(cfg){
   const gf=app.querySelector("#gf"),clean=()=>{over=true;clearInterval(spawn);clearInterval(tick)};
   app.querySelector("#back").onclick=gQuit(cfg,clean);
   const R=()=>rounds[ri%rounds.length];
-  const show=()=>{if(over)return;const r=R();app.querySelector("#gp").innerHTML=r.html||esc(r.prompt);say(r.read||r.prompt,100);gf.querySelectorAll(".bub").forEach(b=>b.remove());lane=0;spawnOne();spawnOne()};
+  const show=()=>{if(over||!gf.isConnected)return;const r=R();app.querySelector("#gp").innerHTML=r.html||esc(r.prompt);say(r.read||r.prompt,100);gf.querySelectorAll(".bub").forEach(b=>b.remove());lane=0;spawnOne();spawnOne()};
   app.querySelector("#say").onclick=()=>hear(R().read||R().prompt);
   let lane=0;
   const spawnOne=()=>{if(over)return;const r=R(),opts=shuffle(r.options);const want=Math.random()<.4||!gf.querySelector(`.bub[data-ok="1"]`);
@@ -2134,7 +2138,7 @@ function wqGame(id){
   if(id==="g_mem"){const ws=shuffle(Wd).slice(0,CH?8:6);Object.assign(cfg,{title:"Memory Match",icon:"🃏",help:"Match each word to what it means.",pairs:ws.map(w=>({a:w.w,b:w.same||w.m}))});return memoryGame(cfg)}
   if(id==="g_rain"){const L=SPL().length?SPL():Wd.filter(w=>!/\s/.test(w.w)).map(w=>({w:w.w.toLowerCase(),s:""}));
     Object.assign(cfg,{title:"Letter Rain",icon:"🌧️",seconds:CH?75:90,fall:CH?5:7.5,decoys:CH?5:3,goal:CH?8:6,words:L.map(x=>({w:x.w,s:x.s||""}))});return letterRain(cfg)}
-  if(id==="g_pop"){const fams=CH?[2,3,4,5,6,7,8,9,10,11,12]:(FACTS.filter(n=>passed("x"+n)).length?FACTS.filter(n=>passed("x"+n)):[2,5,10]);
+  if(id==="g_pop"){const fams=CH?[4,5,6]:(FACTS.filter(n=>passed("x"+n)).length?FACTS.filter(n=>passed("x"+n)):[2,5,10]);
     const rounds=Array.from({length:40},()=>{const a=fams[Math.random()*fams.length|0],b=rnd(1,12),r=a*b;
       const wr=[...new Set([r+a,r-a,r+b,a*(b+2),r+1,r-1].filter(x=>x>0&&x!==r))];return{prompt:`${a} × ${b}`,read:`${a} times ${b}`,target:String(r),options:[String(r),...shuffle(wr).slice(0,3).map(String)]}});
     Object.assign(cfg,{title:"Fact Pop",icon:"🫧",seconds:60,speed:CH?5.5:7.5,goal:CH?18:12,unit:"facts popped",rounds});return bubbleGame(cfg)}
@@ -2143,6 +2147,36 @@ function wqGame(id){
 {const _io=isOpen;isOpen=function(id){if(/^g_/.test(id))return true;if(id==="boss")return U().unlock||passed("final");return _io(id)}}
 {const _lm=lockMsg;lockMsg=function(id){if(id==="boss")return "Get 2 stars in the Final Test to open the Boss.";return _lm(id)}}
 {const _f=finish;finish=function(id,score,n,...r){_f(id,score,n,...r);if(id==="daily"||starsCalc(score,n)>=PASS)confetti()}}
+
+/* ---------- Zaedyn: working on his 4s, 5s and 6s ---------- */
+if(CH){const o=[4,5,6],rest=FACTS.filter(n=>!o.includes(n));FACTS.length=0;FACTS.push(...o,...rest)}
+/* ---------- Naeyleah: longer spelling obby with game levels ---------- */
+const SPGAMES=[{id:"spm",name:"Missing Letters",desc:"Pop the letters that finish the word.",color:"var(--orange)",after:"sp1"},
+ {id:"spr",name:"Spell Check Run",desc:"Jump to the word that is spelled right.",color:"var(--purple)",after:"sp2"},
+ {id:"spl",name:"Letter Rain",desc:"Catch the letters to spell each word.",color:"var(--green)",after:"spr"}];
+if(GM){const _sl=spLevels;spLevels=function(){const L=_sl().slice();if(!SPL().length)return L;
+  SPGAMES.forEach(g=>{let i=L.findIndex(l=>l.id===g.after);if(i<0)i=L.findIndex(l=>l.id==="sp1");L.splice(i+1,0,g)});
+  const t=L.findIndex(l=>l.id==="sp3");if(t>=0)L.push(L.splice(t,1)[0]);return L}}
+function misspell(w){const out=new Set(),sw={ch:"sh",sh:"ch",th:"f",wh:"w",tch:"ch",ph:"f",ck:"k",ee:"ea",ea:"ee",ay:"ai"};
+  Object.keys(sw).forEach(k=>{if(w.includes(k))out.add(w.replace(k,sw[k]))});
+  const i=1+Math.random()*(w.length-2)|0;out.add(w.slice(0,i)+w.slice(i+1));
+  const j=1+Math.random()*(w.length-2)|0;out.add(w.slice(0,j)+w[j]+w.slice(j));
+  if(w.length>3){const k=1+Math.random()*(w.length-3)|0;out.add(w.slice(0,k)+w[k+1]+w[k]+w.slice(k+2))}
+  out.delete(w);return shuffle([...out]).slice(0,2)}
+function spellGame(id){
+  const L=SPL(),cfg={id,tab:"spell",restart:()=>spellGame(id),list:()=>spLevels()};
+  if(id==="spm"){const POOL=["ch","sh","th","wh","tch","ph","ck","str","spr","scr","thr","spl","squ","ee","ea","ay"];
+    const rounds=shuffle(L).flatMap(x=>{const w=x.w,p=patternOf(w);let part=p&&p.type!=="silent"?p.v:null;
+      if(!part){const m=w.match(/ee|ea|ay|ck/);part=m?m[0]:w.slice(0,2)}
+      const at=w.indexOf(part),shown=w.slice(0,at)+"_".repeat(part.length)+w.slice(at+part.length);
+      return[{html:`<span style="letter-spacing:.12em">${esc(shown)}</span>`,prompt:shown,read:`${w}. ${x.s||""}`,target:part,options:[part,...shuffle(POOL.filter(o=>o!==part&&!w.includes(o))).slice(0,3)]}]});
+    Object.assign(cfg,{title:"Missing Letters",icon:"🫧",seconds:90,speed:8,goal:12,starGoal:10,unit:"words finished",rounds});return bubbleGame(cfg)}
+  if(id==="spr"){const items=shuffle(L).slice(0,15).map(x=>{const ch=shuffle([x.w,...misspell(x.w)]);return{q:"Which one is spelled right?",read:`${x.w}. ${x.s||""} Which one is spelled right?`,choices:ch,ans:ch.indexOf(x.w)}});
+    Object.assign(cfg,{title:"Spell Check Run",icon:"🦘",hearts:4,time:20,n:15,starGoal:12,items});return runnerGame(cfg)}
+  if(id==="spl"){Object.assign(cfg,{title:"Letter Rain",icon:"🌧️",seconds:120,fall:7.5,decoys:3,goal:8,starGoal:7,words:L.map(x=>({w:x.w,s:x.s||""}))});return letterRain(cfg)}
+}
+{const _st2=start;start=function(id){if(/^sp[mrl]$/.test(id)){hush();screen="play";document.onkeydown=null;return spellGame(id)}return _st2(id)}}
+{const _io2=isOpen;isOpen=function(id){if(CH&&/^x(2|3|4|5|6|10|11)$/.test(id))return true;return _io2(id)}}
 
 /* ===================== Kid accounts (GitHub Pages) ===================== */
 const KID=(new URLSearchParams(location.search).get("kid")||"").toLowerCase(),KIDNAMES={naeyleah:"Naeyleah",zaedyn:"Zaedyn",adelynn:"Adelynn"};

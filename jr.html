@@ -1395,13 +1395,17 @@ const CH=KIDQ==="zaedyn",GM=KIDQ==="naeyleah";
 `;document.head.appendChild(st)})();
 function confetti(n=60){const C=["#ff4b4b","#3b82f6","#ffcf1f","#22c55e","#8b5cf6","#ff9f1c","#ff6fb5"];
   for(let i=0;i<n;i++){const d=document.createElement("div");d.className="confetti";d.style.left=Math.random()*100+"vw";d.style.background=C[i%C.length];d.style.animationDelay=Math.random()*.6+"s";document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}}
-function gHead(cfg,stats){return `<div class="bar"><button class="back" id="back">← Games</button><span style="flex:1;font-family:var(--display);font-size:20px">${esc(cfg.title)}</span>${stats}</div>`}
+function gHead(cfg,stats){return `<div class="bar"><button class="back" id="back">← ${cfg.tab==="spell"?"Map":"Games"}</button><span style="flex:1;font-family:var(--display);font-size:20px">${esc(cfg.title)}</span>${stats}</div>`}
 function gQuit(cfg,clean){return()=>{clean&&clean();hush();document.onkeydown=null;home(cfg.tab)}}
 function gameEnd(cfg,score,max,line){
   hush();document.onkeydown=null;screen="play";const p=P();p.games=p.games||{};const prev=p.games[cfg.id]||0,rec=score>prev;if(rec)p.games[cfg.id]=score;
   const coins=Math.min(25,Math.max(2,score))+(rec&&prev?5:0);addCoins(coins);if(score>=Math.ceil(max*.6))addXP(1);savePlayer();
-  if(score>=Math.ceil(max*.6))confetti();
-  app.innerHTML=`<div class="card result"><div class="bigicon pop">${cfg.icon||"🎮"}</div><h2>${rec&&prev?"New high score!":score>=Math.ceil(max*.6)?"Awesome!":"Nice try!"}</h2>
+  let stars=-1,opened=null;
+  if(cfg.starGoal){const g=cfg.starGoal;stars=score>=g?3:score>=Math.ceil(g*.7)?2:score>=Math.ceil(g*.4)?1:0;const r=recFor(cfg.id),was=r.best[cfg.id]||0;
+    if(stars>was){r.best[cfg.id]=stars;addXP(stars-was);savePlayer()}
+    if(stars>=PASS&&was<PASS&&cfg.list){const L=cfg.list(),i=L.findIndex(l=>l.id===cfg.id);if(i>=0&&L[i+1])opened=L[i+1]}}
+  if(score>=Math.ceil(max*.6)||stars>=PASS)confetti();
+  app.innerHTML=`<div class="card result">${stars>=0?`<div class="bigicon pop"><span class="star">${"★".repeat(stars)}</span>${"☆".repeat(3-stars)}</div>`:""}<div class="bigicon pop">${cfg.icon||"🎮"}</div>${opened?`<p class="unlock">${esc(opened.name)} is open!</p>`:stars>=0&&stars<PASS?`<p>Get ${cfg.starGoal>1?Math.ceil(cfg.starGoal*.7):1} to earn 2 stars.</p>`:""}<h2>${rec&&prev?"New high score!":score>=Math.ceil(max*.6)?"Awesome!":"Nice try!"}</h2>
    <p class="timer">${score}</p><p>${esc(line||"points")}${prev?` · best ${Math.max(prev,score)}`:""}</p><p class="coinline">+${coins} 🪙</p>
    <div class="row" style="width:100%"><button class="ghost" id="again">Play again</button><button class="btn" id="h">Back</button></div></div>`;
   beep(true);say(`${rec&&prev?"New high score! ":""}You got ${score}! Great playing!`,250);
@@ -1419,7 +1423,7 @@ function bubbleGame(cfg){
   const gf=app.querySelector("#gf"),clean=()=>{over=true;clearInterval(spawn);clearInterval(tick)};
   app.querySelector("#back").onclick=gQuit(cfg,clean);
   const R=()=>rounds[ri%rounds.length];
-  const show=()=>{if(over)return;const r=R();app.querySelector("#gp").innerHTML=r.html||esc(r.prompt);say(r.read||r.prompt,100);gf.querySelectorAll(".bub").forEach(b=>b.remove());lane=0;spawnOne();spawnOne()};
+  const show=()=>{if(over||!gf.isConnected)return;const r=R();app.querySelector("#gp").innerHTML=r.html||esc(r.prompt);say(r.read||r.prompt,100);gf.querySelectorAll(".bub").forEach(b=>b.remove());lane=0;spawnOne();spawnOne()};
   app.querySelector("#say").onclick=()=>hear(R().read||R().prompt);
   let lane=0;
   const spawnOne=()=>{if(over)return;const r=R(),opts=shuffle(r.options);const want=Math.random()<.4||!gf.querySelector(`.bub[data-ok="1"]`);
