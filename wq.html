@@ -780,7 +780,7 @@ function home(tab){
   <div class="hud"><button class="hbtn who" id="who" aria-label="Switch player">${avatarSVG(p.avatar,38)}<span>${esc(p.name)}</span></button><span class="spacer"></span>
    <span class="hbtn" title="Coins">🪙 <b id="cn">${p.coins}</b></span><span class="hbtn" title="Day streak">🔥 ${streakNow()}</span>
    <button class="hbtn" id="voice" aria-pressed="${voiceOn}" aria-label="Voice">${voiceOn?"🔊":"🔇"}</button></div>
-  ${CH?`<div class="challenge"><h3>🔥 Challenge mode</h3><p>Extra letters, no hints, faster games, and a Boss Battle at the end of the Vocab Obby.</p></div>`:""}
+  ${CH?`<div class="challenge"><h3>🔥 Challenge mode</h3><p>Extra letters, no hints, faster games, a Boss Battle at the end of the Vocab Obby, and the Word Problem Tower in Math.</p></div>`:""}
   <div class="hero"><div class="stage"><div class="stand">${avatarSVG(p.avatar,140)}<span class="pet">${pt[0]}</span></div><div class="ground"></div></div>
    <div class="herotext"><button class="hbtn" id="weekbtn" style="align-self:flex-start">📅 ${esc(content.unit)} ▾</button><h1>Word Quest</h1>
     <p class="petline">${pt[0]} Your ${pt[1]} · ${p.xp} XP${nx?` · ${nx[2]-p.xp} to grow`:" · Fully grown!"}</p><div class="xp"><div style="width:${pct}%"></div></div>
@@ -2177,6 +2177,86 @@ function spellGame(id){
 }
 {const _st2=start;start=function(id){if(/^sp[mrl]$/.test(id)){hush();screen="play";document.onkeydown=null;return spellGame(id)}return _st2(id)}}
 {const _io2=isOpen;isOpen=function(id){if(CH&&/^x(2|3|4|5|6|10|11)$/.test(id))return true;return _io2(id)}}
+/* ---------- Zaedyn: Word Problem Tower (typed answers, 1-step to multi-step) ---------- */
+const WPL=[{id:"yw1",name:"Floor 1: One Step",icon:"🧱",desc:"Equal groups, sharing and arrays.",color:"var(--blue)"},
+ {id:"yw2",name:"Floor 2: Two Steps",icon:"🪜",desc:"Two steps to solve each one.",color:"var(--orange)"},
+ {id:"yw3",name:"Floor 3: Boss Problems",icon:"🐲",desc:"Extra info, change and leftovers.",color:"#b91c1c"}];
+function wpGen(lv){
+  const F=[4,5,6],f=()=>F[Math.random()*3|0],k=(a,b)=>rnd(a,b),N=shuffle(["Zaedyn","Naeyleah","Bryden","Addy","Mom","Dad"]),A=N[0],B=N[1];
+  const T1=[
+   ()=>{const a=k(3,9),b=f();return{t:`${A} has ${a} bags. Each bag has ${b} cookies. How many cookies does ${A} have in all?`,ans:a*b,how:`${a} groups of ${b}: ${a} × ${b} = ${a*b}`}},
+   ()=>{const a=f(),b=k(3,9);return{t:`${A} put ${a*b} toy cars into ${a} equal rows. How many cars are in each row?`,ans:b,how:`Share ${a*b} into ${a} rows: ${a*b} ÷ ${a} = ${b}`}},
+   ()=>{const a=k(3,9);return{t:`A bug has 6 legs. How many legs do ${a} bugs have?`,ans:6*a,how:`${a} × 6 = ${6*a}`}},
+   ()=>{const b=f(),a=k(3,9);return{t:`Juice boxes come in packs of ${b}. ${A} needs ${a*b} juice boxes for a party. How many packs should ${A} buy?`,ans:a,how:`How many ${b}s make ${a*b}? ${a*b} ÷ ${b} = ${a}`}},
+   ()=>{const a=f(),b=k(4,9);return{t:`The class garden has ${a} rows with ${b} plants in each row. How many plants are there?`,ans:a*b,how:`${a} rows × ${b} = ${a*b}`}},
+   ()=>{const a=f(),b=k(3,9);return{t:`${A} has ${a*b} stickers. ${A} shares them equally with ${a} friends. How many stickers does each friend get?`,ans:b,how:`${a*b} ÷ ${a} = ${b}`}},
+   ()=>{const b=f(),a=k(3,9);return{t:`Meah eats ${b} treats a day. How many treats does Meah eat in ${a} days?`,ans:a*b,how:`${a} days × ${b} = ${a*b}`}}];
+  const T2=[
+   ()=>{const a=k(3,8),b=f(),c=k(2,a*b-3);return{t:`${A} buys ${a} packs of pencils. Each pack has ${b} pencils. Then ${A} gives ${c} pencils to ${B}. How many pencils does ${A} have left?`,ans:a*b-c,how:`Step 1: ${a} × ${b} = ${a*b}. Step 2: ${a*b} − ${c} = ${a*b-c}`}},
+   ()=>{const a=k(3,8),b=f(),c=k(2,9);return{t:`${A} has ${a} boxes of crayons with ${b} crayons in each box, plus ${c} loose crayons. How many crayons does ${A} have in all?`,ans:a*b+c,how:`Step 1: ${a} × ${b} = ${a*b}. Step 2: ${a*b} + ${c} = ${a*b+c}`}},
+   ()=>{const a=k(2,6),b=f();return{t:`${A} and ${B} each have ${a} bags of marbles. Every bag has ${b} marbles. How many marbles do they have together?`,ans:2*a*b,how:`One person: ${a} × ${b} = ${a*b}. Two people: ${a*b} + ${a*b} = ${2*a*b}`}},
+   ()=>{const a=f(),b=k(4,9),c=k(1,b-2);return{t:`${a*b} cookies are shared equally by ${a} kids. Then each kid eats ${c} cookies. How many cookies does each kid have left?`,ans:b-c,how:`Step 1: ${a*b} ÷ ${a} = ${b}. Step 2: ${b} − ${c} = ${b-c}`}},
+   ()=>{const a=k(3,8),b=f(),P=a*b+k(10,40);return{t:`${A}'s book has ${P} pages. ${A} reads ${b} pages a day for ${a} days. How many pages are left to read?`,ans:P-a*b,how:`Step 1: ${a} × ${b} = ${a*b} pages read. Step 2: ${P} − ${a*b} = ${P-a*b}`}},
+   ()=>{const a=f(),b=k(3,9),c=f(),d=k(2,6);return{t:`${A} has ${a} rows of ${b} cards. ${B} has ${c} rows of ${d} cards. How many cards do they have in all?`,ans:a*b+c*d,how:`${a} × ${b} = ${a*b}. ${c} × ${d} = ${c*d}. ${a*b} + ${c*d} = ${a*b+c*d}`}}];
+  const T3=[
+   ()=>{const a=k(2,6),b=f(),bill=a*b<20?20:a*b<50?50:100;return{t:`Movie tickets cost $${b} each. ${A} buys ${a} tickets and pays with a $${bill} bill. How much change does ${A} get?`,ans:bill-a*b,how:`Cost: ${a} × $${b} = $${a*b}. Change: $${bill} − $${a*b} = $${bill-a*b}`}},
+   ()=>{const a=f(),b=k(3,9);return{t:`${A} has ${a} times as many cards as ${B}. ${B} has ${b} cards. How many cards do they have together?`,ans:a*b+b,how:`${A}: ${a} × ${b} = ${a*b}. Together: ${a*b} + ${b} = ${a*b+b}`}},
+   ()=>{const a=f(),b=k(4,9),c=k(2,6),d=k(3,9);return{t:`A garden has ${a} rows of ${b} plants. ${c} plants did not grow. Then ${B} planted ${d} more. How many plants are in the garden now?`,ans:a*b-c+d,how:`${a} × ${b} = ${a*b}. ${a*b} − ${c} = ${a*b-c}. ${a*b-c} + ${d} = ${a*b-c+d}`}},
+   ()=>{const b=f(),a=k(3,8),r=k(1,b-1),tot=b*(a-1)+r;return{t:`${tot} kids are going on a trip. Each van holds ${b} kids. How many vans are needed so every kid gets a seat?`,ans:a,how:`${tot} ÷ ${b} = ${a-1} full vans with ${r} kids left over. Those ${r} kids need one more van, so ${a}.`}},
+   ()=>{const a=k(3,9),b=f();return{t:`${A} has ${a} fish tanks. Each tank has ${b} fish and 2 plants. How many fish does ${A} have? (Careful: not every number is needed!)`,ans:a*b,how:`Only the fish count: ${a} × ${b} = ${a*b}. The plants are extra info.`}},
+   ()=>{const b=f(),a=k(3,9),c=k(1,a-1);return{t:`Toys come in boxes of ${b}. ${A} has ${a*b} toys in boxes and gives away ${c} whole boxes. How many toys does ${A} have now?`,ans:(a-c)*b,how:`Boxes: ${a*b} ÷ ${b} = ${a}. ${a} − ${c} = ${a-c} boxes. ${a-c} × ${b} = ${(a-c)*b}`}},
+   ()=>{const b=f(),a=k(4,9);return{t:`${A} saves $${b} every week. How many weeks will it take to save $${a*b} for a new game?`,ans:a,how:`$${a*b} ÷ $${b} = ${a} weeks`}}];
+  const T=lv===1?T1:lv===2?T2:T3;return T[Math.random()*T.length|0]();
+}
+function wpGame(id){
+  screen="play";hush();document.onkeydown=null;
+  const lv=+id.slice(2),L=WPL.find(l=>l.id===id),n=8,used=new Set(),probs=[];
+  while(probs.length<n){const p=wpGen(lv);if(!used.has(p.t)){used.add(p.t);probs.push(p)}}
+  let i=0,score=0,hearts=3,tries=0,hinted=false,typed="",locked=false;
+  const tower=()=>`<div style="display:flex;flex-direction:column-reverse;gap:4px;min-width:62px">${probs.map((_,k)=>`<div style="height:30px;border:3px solid var(--ink);border-radius:6px;background:${k<i?"var(--green)":k===i?"var(--yellow)":"var(--paper)"};display:grid;place-items:center;font-family:var(--display);font-size:14px">${k===i?"🧗":k<i?"✓":k+1}</div>`).join("")}<div style="font-size:26px;text-align:center">${lv===3?"🐲":"🏰"}</div></div>`;
+  const draw=(msg,cls,more)=>{const p=probs[i];
+    app.innerHTML=`<div class="bar"><button class="back" id="back">← Map</button><span style="flex:1;font-family:var(--display);font-size:19px">${esc(L.name)}</span><span class="hearts">${"❤️".repeat(hearts)}${"🤍".repeat(3-hearts)}</span><span class="hbtn">⭐ <b>${score}</b></span></div>
+     <div style="display:flex;gap:10px;align-items:stretch"><div class="card" style="flex:1;padding:14px;gap:10px">
+      <div class="ask">Problem ${i+1} of ${n}${tries?" · try again":""}</div><p class="prompt" style="font-size:21px">${esc(p.t)}</p>
+      <div class="typed" id="typed">${esc(typed)}<span class="caret"></span></div>
+      <div class="kb">${[["1","2","3"],["4","5","6"],["7","8","9"],["del","0","ok"]].map(r=>`<div class="kbrow">${r.map(c=>`<button class="key ${c==="ok"?"go":""}" data-k="${c}" style="max-width:90px;height:52px" aria-label="${c==="del"?"Delete":c==="ok"?"Check":c}">${c==="del"?"⌫":c==="ok"?"✓":c}</button>`).join("")}</div>`).join("")}</div>
+      <div class="row"><button class="say" id="hint">💡 Show a hint</button><button class="say" id="say">🔊 Read it</button></div>
+      <div class="feedback ${cls||""}" id="fb">${msg||""}</div>${more||""}</div>${tower()}</div>`;
+    app.querySelector("#back").onclick=()=>{hush();document.onkeydown=null;home("math")};
+    app.querySelector("#say").onclick=()=>hear(p.t);
+    app.querySelector("#hint").onclick=()=>{hinted=true;const first=p.how.split(". ")[0];draw(`Hint: ${first}${p.how.includes(". ")?"…":""}`,"",more)};
+    app.querySelectorAll(".key").forEach(b=>b.onclick=()=>press(b.dataset.k));
+    const nx=app.querySelector("#nx");if(nx)nx.onclick=next;
+  };
+  const refresh=()=>{const e=app.querySelector("#typed");if(e)e.innerHTML=esc(typed)+'<span class="caret"></span>'};
+  const press=c=>{if(locked)return;if(c==="ok")return check();if(c==="del")typed=typed.slice(0,-1);else if(typed.length<4)typed+=c;refresh()};
+  const next=()=>{i++;tries=0;hinted=false;typed="";locked=false;if(i>=n||hearts<=0)return done();draw();say(probs[i].t,200)};
+  const check=()=>{if(locked||!typed)return;const p=probs[i];
+    if(+typed===p.ans){locked=true;const first=!tries&&!hinted;if(first)score++;addCoins(first?3:1);sfx.jump();
+      draw(first?"Correct! You climbed a floor!":"Got it!","good");say(first?"Correct! Climb!":"Got it!",50);setTimeout(next,1100);return}
+    beep(false);tries++;typed="";
+    if(tries<2){draw("Not quite. Read it again and try one more time.","oops");say("Not quite. Try one more time.",50);return}
+    locked=true;hearts--;draw(`The answer is ${p.ans}.`,"oops",`<div class="teach">${esc(p.how)}</div><button class="next" id="nx">Got it, next →</button>`);say(`The answer is ${p.ans}. ${p.how}`,100)};
+  const done=()=>{hush();document.onkeydown=null;const m=M(),stars=starsCalc(score,n),was=m.best[id]||0,bonus=5+(stars>was?(stars-was)*10:0);
+    if(stars>was){m.best[id]=stars;addXP(stars-was)}addCoins(bonus);savePlayer();if(stars>=PASS)confetti();
+    const nxt=WPL[WPL.findIndex(l=>l.id===id)+1],opened=nxt&&stars>=PASS&&was<PASS?nxt:null,fell=hearts<=0&&i<n;
+    app.innerHTML=`<div class="card result"><div class="bigicon pop"><span class="star">${"★".repeat(stars)}</span>${"☆".repeat(3-stars)}</div>
+     <h2>${fell?"Out of hearts!":stars===3?(lv===3?"Boss defeated!":"Perfect climb!"):stars>=PASS?"Great problem solving!":"Keep climbing!"}</h2><p>${score} of ${n} right on the first try</p><p class="coinline">+${bonus} 🪙</p>
+     ${opened?`<p class="unlock">${esc(opened.name)} is open!</p>`:stars<PASS?"<p>Get 6 right on the first try for 2 stars.</p>":""}
+     <div class="row" style="width:100%"><button class="ghost" id="again">Play again</button><button class="btn" id="h">Back to map</button></div></div>`;
+    beep(stars>=PASS);say(`You got ${score} out of ${n} on the first try.${opened?` ${opened.name} is open!`:""}`,300);
+    app.querySelector("#again").onclick=()=>wpGame(id);app.querySelector("#h").onclick=()=>home("math")};
+  document.onkeydown=e=>{if(/^[0-9]$/.test(e.key)){press(e.key);e.preventDefault()}else if(e.key==="Backspace"){press("del");e.preventDefault()}else if(e.key==="Enter"){press("ok");e.preventDefault()}};
+  draw();say(probs[0].t,250);
+}
+if(CH){
+  {const _st3=start;start=function(id){if(/^yw\d$/.test(id))return wpGame(id);return _st3(id)}}
+  {const _io3=isOpen;isOpen=function(id){if(/^yw\d$/.test(id)){const j=WPL.findIndex(l=>l.id===id);return j===0||M().unlock||passed(WPL[j-1].id)}return _io3(id)}}
+  {const _rw=renderWorld;renderWorld=function(){_rw();const v=document.getElementById("worldview");if(!v||homeTab!=="math")return;
+    v.insertAdjacentHTML("afterbegin",`<div class="maptitle"><h2>🏰 Word Problem Tower</h2><p>Type your answers. Climb to the boss!</p></div><div class="arcade" style="margin-bottom:16px">${WPL.map(l=>{const o=isOpen(l.id),s=starsFor(l.id);
+      return `<button class="game ${o?"":"locked"}" data-w="${l.id}" style="background:${l.color}"><span class="ic">${o?l.icon:"🔒"}</span><h3>${esc(l.name)}</h3><p>${o?esc(l.desc)+(s?" · "+"★".repeat(s):""):"Get 2 stars on the floor below."}</p>${o?`<span class="play">▶ CLIMB</span>`:""}</button>`}).join("")}</div>`);
+    v.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{if(isOpen(b.dataset.w))wpGame(b.dataset.w);else{beep(false);say("Get 2 stars on the floor below to open this.")}})}}
+}
 
 /* ===================== Kid accounts (GitHub Pages) ===================== */
 const KID=(new URLSearchParams(location.search).get("kid")||"").toLowerCase(),KIDNAMES={naeyleah:"Naeyleah",zaedyn:"Zaedyn",adelynn:"Adelynn"};
